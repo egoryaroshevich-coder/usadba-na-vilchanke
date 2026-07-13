@@ -210,7 +210,7 @@ export default function HomePage() {
                       <strong>{item.price}</strong>
                       <span>{item.unit}</span>
                     </div>
-                    <a className="price-card__link" href={`/booking?service=${encodeURIComponent(item.title)}`}>
+                    <a className="price-card__link" href="/booking">
                       Уточнить дату <ArrowRight size={18} />
                     </a>
                   </article>
@@ -334,7 +334,7 @@ export default function HomePage() {
             <div className="location__content reveal">
               <SectionHeading
                 eyebrow="Расположение"
-                title="Достаточно близко, чтобы приехать. Достаточно далеко, чтобы отдохнуть."
+                title="Достаточно близко, чтобы приехать. И достаточно тихо, чтобы по-настоящему отдохнуть."
               />
               <div className="location__details">
                 <div><MapPin size={21} /><span><small>Адрес</small><strong>{siteData.contacts.address}</strong></span></div>

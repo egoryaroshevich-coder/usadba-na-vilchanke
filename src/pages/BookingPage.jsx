@@ -9,12 +9,8 @@ import {
   Clock3,
   Info,
   LockKeyhole,
-  Minus,
   Phone,
-  Plus,
   Sparkles,
-  Trash2,
-  UtensilsCrossed,
   Users,
 } from 'lucide-react'
 import SiteLogo from '../components/SiteLogo.jsx'
@@ -29,44 +25,17 @@ const initialForm = {
   guests: '',
   childrenNoBed: '0',
   eventType: '',
-  service: '',
   bathSessions: '0',
   boatDays: '0',
   foldingBeds: '0',
   oakBrooms: '0',
   firewoodBuckets: '0',
-  menuItems: {},
   comment: '',
   consent: false,
 }
 
-const menuCatalog = siteData.menu.flatMap((category) => category.items.map((item, index) => ({
-  ...item,
-  id: `${category.id}-${index}`,
-  category: category.label,
-  price: Number(item.price.replace(/[^\d,]/g, '').replace(',', '.')),
-})))
-
 export default function BookingPage() {
-  const preselectedService = useMemo(() => {
-    const requested = new URLSearchParams(window.location.search).get('service')
-    if (!requested) return ''
-    const aliases = {
-      'Аренда усадьбы': 'Аренда всей усадьбы',
-      'Сутки в усадьбе': 'Аренда всей усадьбы',
-      'Мини-отпуск на 3 суток': 'Проживание',
-      'Мини-отпуск на 5 суток': 'Проживание',
-      'Русская баня': 'Баня и сауна',
-      'Лодка с жилетами': 'Отдых у воды',
-      'Проведение праздников': 'Проведение праздника',
-      'Дополнительные услуги': 'Нужна консультация',
-    }
-    if (aliases[requested]) return aliases[requested]
-    return siteData.booking.services.find((service) => service === requested || service.includes(requested) || requested.includes(service)) || ''
-  }, [])
-  const [form, setForm] = useState({ ...initialForm, service: preselectedService })
-  const [menuChoice, setMenuChoice] = useState('')
-  const [menuQuantity, setMenuQuantity] = useState('1')
+  const [form, setForm] = useState(initialForm)
   const [submitted, setSubmitted] = useState(false)
   const pricing = siteData.booking.pricing
 
@@ -78,10 +47,7 @@ export default function BookingPage() {
   ].join('-')
   const minCheckOut = form.checkIn ? addDays(form.checkIn, 1) : addDays(minDate, 1)
 
-  const calculation = useMemo(
-    () => calculateBookingPrice({ ...form, menuCatalog }, pricing),
-    [form, pricing],
-  )
+  const calculation = useMemo(() => calculateBookingPrice(form, pricing), [form, pricing])
 
   const updateField = (event) => {
     const { name, type, value, checked } = event.target
@@ -98,28 +64,8 @@ export default function BookingPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const setMenuItemQuantity = (id, quantity) => {
-    const safeQuantity = Math.max(0, Math.min(20, Number(quantity) || 0))
-    setForm((current) => {
-      const menuItems = { ...current.menuItems }
-      if (safeQuantity === 0) delete menuItems[id]
-      else menuItems[id] = safeQuantity
-      return { ...current, menuItems }
-    })
-  }
-
-  const addMenuItem = () => {
-    if (!menuChoice) return
-    const currentQuantity = Number(form.menuItems[menuChoice] || 0)
-    setMenuItemQuantity(menuChoice, currentQuantity + Number(menuQuantity || 1))
-    setMenuChoice('')
-    setMenuQuantity('1')
-  }
-
   const resetForm = () => {
-    setForm({ ...initialForm, service: preselectedService })
-    setMenuChoice('')
-    setMenuQuantity('1')
+    setForm(initialForm)
     setSubmitted(false)
   }
 
@@ -155,7 +101,6 @@ export default function BookingPage() {
                 <div className="success-card__summary">
                   <div><CalendarDays size={20} /><span><small>Период</small><strong>{formatDate(form.checkIn)} — {formatDate(form.checkOut)}</strong></span></div>
                   <div><Users size={20} /><span><small>Гости</small><strong>{form.guests} + {form.childrenNoBed} без места</strong></span></div>
-                  <div><Sparkles size={20} /><span><small>Услуга</small><strong>{form.service}</strong></span></div>
                   <div><Calculator size={20} /><span><small>Предварительно</small><strong>{formatPrice(calculation.total)}</strong></span></div>
                 </div>
                 <div className="form-notice form-notice--success">
@@ -217,13 +162,6 @@ export default function BookingPage() {
                         {siteData.booking.eventTypes.map((item) => <option key={item}>{item}</option>)}
                       </select>
                     </label>
-                    <label className="field">
-                      <span>Услуга <em>*</em></span>
-                      <select name="service" value={form.service} onChange={updateField} required>
-                        <option value="" disabled>Выберите услугу</option>
-                        {siteData.booking.services.map((item) => <option key={item}>{item}</option>)}
-                      </select>
-                    </label>
                   </div>
                 </div>
 
@@ -253,46 +191,13 @@ export default function BookingPage() {
                       <span>Дополнительные вёдра дров</span>
                       <input name="firewoodBuckets" type="number" min="0" max="20" value={form.firewoodBuckets} onChange={updateField} />
                     </label>
-                    <div className="menu-picker field--full">
-                      <div className="menu-picker__head">
-                        <span><UtensilsCrossed size={19} /></span>
-                        <div><strong>Добавить блюда из меню</strong><small>Стоимость сразу войдёт в расчёт</small></div>
-                      </div>
-                      <div className="menu-picker__controls">
-                        <select value={menuChoice} onChange={(event) => setMenuChoice(event.target.value)} aria-label="Блюдо из меню">
-                          <option value="">Выберите блюдо</option>
-                          {siteData.menu.map((category) => (
-                            <optgroup key={category.id} label={category.label}>
-                              {category.items.map((item, index) => {
-                                const catalogItem = menuCatalog.find((entry) => entry.id === `${category.id}-${index}`)
-                                return <option key={catalogItem.id} value={catalogItem.id}>{item.name} · {item.weight} · {item.price}</option>
-                              })}
-                            </optgroup>
-                          ))}
-                        </select>
-                        <input type="number" min="1" max="20" value={menuQuantity} onChange={(event) => setMenuQuantity(event.target.value)} aria-label="Количество" />
-                        <button className="button button--outline" type="button" onClick={addMenuItem} disabled={!menuChoice}><Plus size={16} /> Добавить</button>
-                      </div>
-                      {calculation.menuItems.length > 0 && (
-                        <div className="menu-picker__selected">
-                          {calculation.menuItems.map((item) => (
-                            <div className="menu-picker__item" key={item.id}>
-                              <span><strong>{item.name}</strong><small>{item.weight} · {formatPrice(item.price)} × {item.count}</small></span>
-                              <div>
-                                <button type="button" onClick={() => setMenuItemQuantity(item.id, item.count - 1)} aria-label={`Уменьшить количество: ${item.name}`}><Minus size={13} /></button>
-                                <b>{item.count}</b>
-                                <button type="button" onClick={() => setMenuItemQuantity(item.id, item.count + 1)} aria-label={`Увеличить количество: ${item.name}`}><Plus size={13} /></button>
-                                <button className="menu-picker__remove" type="button" onClick={() => setMenuItemQuantity(item.id, 0)} aria-label={`Удалить: ${item.name}`}><Trash2 size={14} /></button>
-                              </div>
-                            </div>
-                          ))}
-                          <div className="menu-picker__subtotal"><span>Меню</span><strong>{formatPrice(calculation.menuTotal)}</strong></div>
-                        </div>
-                      )}
+                    <div className="form-notice form-notice--menu field--full">
+                      <Info size={18} />
+                      <span>Меню и количество блюд согласуются с владельцем после отправки заявки.</span>
                     </div>
                     <label className="field field--full">
                       <span>Комментарий</span>
-                      <textarea name="comment" value={form.comment} onChange={updateField} maxLength="500" rows="5" placeholder="Расскажите, что для вас важно: нужна ли баня, проживание, меню или особое оформление" />
+                      <textarea name="comment" value={form.comment} onChange={updateField} maxLength="500" rows="5" placeholder="Расскажите, что для вас важно: нужна ли баня, проживание или есть особые пожелания" />
                       <small>{form.comment.length} / 500</small>
                     </label>
                   </div>
@@ -336,12 +241,6 @@ export default function BookingPage() {
                             <strong>{formatPrice(item.total)}</strong>
                           </div>
                         ))}
-                        {calculation.menuTotal > 0 && (
-                          <div>
-                            <span>Меню · {calculation.menuItems.reduce((sum, item) => sum + item.count, 0)} поз.</span>
-                            <strong>{formatPrice(calculation.menuTotal)}</strong>
-                          </div>
-                        )}
                       </div>
                       <div className="booking-estimate__total">
                         <span>Итого</span>
@@ -351,7 +250,7 @@ export default function BookingPage() {
                   ) : (
                     <p>Укажите даты заезда и выезда, а также количество гостей — расчёт появится автоматически.</p>
                   )}
-                  <small>Предварительный расчёт, включая выбранные блюда. Актуальность стоимости уточнит администратор.</small>
+                  <small>Предварительный расчёт. Актуальность стоимости уточнит администратор.</small>
                 </output>
                 <div className="booking-aside__contact">
                   <span>Удобнее позвонить?</span>
