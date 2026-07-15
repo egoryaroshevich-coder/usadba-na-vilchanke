@@ -816,6 +816,27 @@ h3 {
   grid-column: span 4;
 }
 
+.gallery-card--extra {
+  min-height: 280px;
+  grid-column: span 4;
+}
+
+.public-empty {
+  grid-column: 1 / -1;
+  padding: 34px 22px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.65);
+  color: var(--muted);
+  text-align: center;
+}
+
+.menu-empty {
+  display: grid;
+  min-height: 180px;
+  place-items: center;
+}
+
 .gallery-card img,
 .gallery-card__shade {
   position: absolute;

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   ArrowDown,
   ArrowRight,
@@ -26,6 +26,7 @@ import SectionHeading from '../components/SectionHeading.jsx'
 import SiteFooter from '../components/SiteFooter.jsx'
 import SiteHeader from '../components/SiteHeader.jsx'
 import { siteData } from '../data/siteData.js'
+import usePublicContent from '../hooks/usePublicContent.js'
 
 const iconMap = {
   BedDouble,
@@ -41,19 +42,29 @@ const iconMap = {
 }
 
 export default function HomePage() {
+  const { prices, menu, gallery } = usePublicContent()
   const [selectedImage, setSelectedImage] = useState(null)
-  const [activeMenu, setActiveMenu] = useState(siteData.menu[0].id)
+  const [activeMenu, setActiveMenu] = useState(null)
   const closeGallery = useCallback(() => setSelectedImage(null), [])
-  const activeCategory = siteData.menu.find((category) => category.id === activeMenu)
+  const activeCategory = menu.find((category) => category.id === activeMenu)
+
+  useEffect(() => {
+    if (menu.length === 0) {
+      if (activeMenu !== null) setActiveMenu(null)
+      return
+    }
+    if (!menu.some((category) => category.id === activeMenu)) setActiveMenu(menu[0].id)
+  }, [activeMenu, menu])
+
   const switchMenuByKeyboard = (event, currentIndex) => {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+    if (menu.length === 0 || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
     event.preventDefault()
     let nextIndex = currentIndex
-    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % siteData.menu.length
-    if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + siteData.menu.length) % siteData.menu.length
+    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % menu.length
+    if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + menu.length) % menu.length
     if (event.key === 'Home') nextIndex = 0
-    if (event.key === 'End') nextIndex = siteData.menu.length - 1
-    const nextCategory = siteData.menu[nextIndex]
+    if (event.key === 'End') nextIndex = menu.length - 1
+    const nextCategory = menu[nextIndex]
     setActiveMenu(nextCategory.id)
     window.requestAnimationFrame(() => document.getElementById(`menu-tab-${nextCategory.id}`)?.focus())
   }
@@ -165,11 +176,11 @@ export default function HomePage() {
             </div>
 
             <div className="gallery-grid reveal">
-              {siteData.gallery.map((image, index) => (
+              {gallery.map((image, index) => (
                 <button
-                  className={`gallery-card gallery-card--${index + 1}`}
+                  className={`gallery-card ${index < 8 ? `gallery-card--${index + 1}` : 'gallery-card--extra'}`}
                   type="button"
-                  key={image.title}
+                  key={image.id || `${image.title}-${index}`}
                   onClick={() => setSelectedImage(index)}
                   aria-label={`Увеличить фотографию: ${image.title}`}
                 >
@@ -179,6 +190,7 @@ export default function HomePage() {
                   <span className="gallery-card__expand"><Expand size={18} /></span>
                 </button>
               ))}
+              {gallery.length === 0 && <p className="public-empty">Фотографии пока не добавлены.</p>}
             </div>
           </div>
         </section>
@@ -193,10 +205,10 @@ export default function HomePage() {
               />
             </div>
             <div className="price-grid reveal">
-              {siteData.prices.map((item) => {
-                const Icon = iconMap[item.icon]
+              {prices.map((item) => {
+                const Icon = iconMap[item.icon] || Sparkles
                 return (
-                  <article className={`price-card ${item.featured ? 'price-card--featured' : ''}`} key={item.title}>
+                  <article className={`price-card ${item.featured ? 'price-card--featured' : ''}`} key={item.id || item.title}>
                     {item.badge && <span className="price-card__badge">{item.badge}</span>}
                     <span className="price-card__icon"><Icon size={25} /></span>
                     <h3>{item.title}</h3>
@@ -216,6 +228,7 @@ export default function HomePage() {
                   </article>
                 )
               })}
+              {prices.length === 0 && <p className="public-empty">Цены пока не заполнены.</p>}
             </div>
             <div className="price-disclaimer reveal">
               <Check size={19} />
@@ -248,7 +261,7 @@ export default function HomePage() {
             </div>
 
             <div className="menu-tabs reveal" role="tablist" aria-label="Категории меню">
-              {siteData.menu.map((category, index) => (
+              {menu.map((category, index) => (
                 <button
                   id={`menu-tab-${category.id}`}
                   className={activeMenu === category.id ? 'is-active' : ''}
@@ -266,34 +279,38 @@ export default function HomePage() {
               ))}
             </div>
 
-            <div id="menu-panel" className="menu-card reveal" role="tabpanel" aria-labelledby={`menu-tab-${activeMenu}`}>
-              <div className="menu-card__title">
-                <span>Категория</span>
-                <h3>{activeCategory.label}</h3>
-              </div>
-              <div className="menu-list">
-                {activeCategory.items.map((item) => (
-                  <article className="menu-item" key={item.name}>
-                    <div className="menu-item__main">
-                      <h4>{item.name}</h4>
-                      <span className="menu-item__line" />
-                      <strong>{item.price}</strong>
-                    </div>
-                    <div className="menu-item__meta">
-                      <p>{item.description}</p>
-                      <span>{item.weight}</span>
-                    </div>
-                  </article>
-                ))}
-              </div>
-              <div className="menu-card__footer">
-                <div>
-                  <UtensilsCrossed size={23} />
-                  <span><strong>Предварительный заказ</strong>{siteData.menuUpdated}</span>
+            {activeCategory ? (
+              <div id="menu-panel" className="menu-card reveal" role="tabpanel" aria-labelledby={`menu-tab-${activeMenu}`}>
+                <div className="menu-card__title">
+                  <span>Категория</span>
+                  <h3>{activeCategory.label}</h3>
                 </div>
-                <a className="button button--dark" href="/booking">Обсудить меню <ArrowUpRight size={18} /></a>
+                <div className="menu-list">
+                  {activeCategory.items.map((item) => (
+                    <article className="menu-item" key={item.id || item.name}>
+                      <div className="menu-item__main">
+                        <h4>{item.name}</h4>
+                        <span className="menu-item__line" />
+                        <strong>{item.price}</strong>
+                      </div>
+                      <div className="menu-item__meta">
+                        <p>{item.description}</p>
+                        <span>{item.weight}</span>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+                <div className="menu-card__footer">
+                  <div>
+                    <UtensilsCrossed size={23} />
+                    <span><strong>Предварительный заказ</strong>{siteData.menuUpdated}</span>
+                  </div>
+                  <a className="button button--dark" href="/booking">Обсудить меню <ArrowUpRight size={18} /></a>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="menu-empty reveal">Меню пока не заполнено</div>
+            )}
           </div>
         </section>
 
@@ -380,7 +397,7 @@ export default function HomePage() {
       <SiteFooter />
       {selectedImage !== null && (
         <GalleryModal
-          images={siteData.gallery}
+          images={gallery}
           selectedIndex={selectedImage}
           onClose={closeGallery}
           onChange={setSelectedImage}
