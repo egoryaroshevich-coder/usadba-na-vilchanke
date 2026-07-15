@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import HomePage from './pages/HomePage.jsx'
 import BookingPage from './pages/BookingPage.jsx'
+import AdminPage from './pages/AdminPage.jsx'
 import { siteData } from './data/siteData.js'
 
 function App() {
@@ -9,7 +10,9 @@ function App() {
   useEffect(() => {
     document.title = path === '/booking'
       ? `Бронирование — ${siteData.brand.name}`
-      : `${siteData.brand.name} — отдых у воды`
+      : path === '/admin'
+        ? `Административная панель — ${siteData.brand.name}`
+        : `${siteData.brand.name} — отдых у воды`
     let scrollFrame
     if (path === '/' && window.location.hash) {
       scrollFrame = window.requestAnimationFrame(() => {
@@ -47,6 +50,7 @@ function App() {
   }, [path])
 
   if (path === '/booking') return <BookingPage />
+  if (path === '/admin') return <AdminPage />
   return <HomePage />
 }
 

@@ -27,16 +27,8 @@ export function calculateBookingPrice(form, pricing) {
     ? Math.round((checkOutTime - checkInTime) / dayInMs)
     : 0
 
-  const menuItems = (form.menuCatalog || [])
-    .map((item) => {
-      const count = Number(form.menuItems?.[item.id] || 0)
-      return { ...item, count, total: count * item.price }
-    })
-    .filter((item) => item.count > 0)
-  const menuTotal = menuItems.reduce((sum, item) => sum + item.total, 0)
-
   if (nights < 1 || guests < 1 || guests > pricing.daily.maxGuests) {
-    return { ready: false, nights: 0, total: menuTotal, menuItems, menuTotal, lines: [] }
+    return { ready: false, nights: 0, total: 0, lines: [] }
   }
 
   const dailyRate = pricing.daily.basePrice
@@ -63,9 +55,7 @@ export function calculateBookingPrice(form, pricing) {
     stayPrice,
     extras,
     extrasTotal,
-    menuItems,
-    menuTotal,
-    total: stayPrice + extrasTotal + menuTotal,
+    total: stayPrice + extrasTotal,
     packageApplied: Boolean(packagePrice),
     packageConfig,
     tariff: packagePrice ? `Мини-отпуск на ${nights} суток` : 'Суточный тариф',
