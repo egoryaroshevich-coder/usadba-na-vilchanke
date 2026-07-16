@@ -1888,11 +1888,20 @@ h3 {
 }
 
 .booking-form {
+  position: relative;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   background: var(--white);
   box-shadow: 0 20px 60px rgba(39, 56, 31, 0.06);
+}
+
+.booking-honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
 }
 
 .booking-form__section {
@@ -2064,6 +2073,11 @@ h3 {
   width: 100%;
 }
 
+.booking-form__submit > .button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .form-notice {
   display: flex;
   align-items: flex-start;
@@ -2080,6 +2094,17 @@ h3 {
 .form-notice svg {
   flex: none;
   color: #9c7a16;
+}
+
+.form-notice--error {
+  margin-top: 0;
+  margin-bottom: 17px;
+  background: #fff0ed;
+  color: #8f3f32;
+}
+
+.form-notice--error svg {
+  color: #b35140;
 }
 
 .form-notice--menu {

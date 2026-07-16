@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   ArrowLeft,
   ArrowRight,
@@ -16,6 +16,10 @@ import {
 import SiteLogo from '../components/SiteLogo.jsx'
 import { siteData } from '../data/siteData.js'
 import { addDays, calculateBookingPrice, formatDate, formatPrice } from '../utils/bookingPrice.js'
+import { createBookingPayload } from '../utils/bookingNotification.js'
+
+const SUBMIT_TIMEOUT_MS = 12000
+const SUBMIT_ERROR_MESSAGE = 'Не удалось отправить заявку. Проверьте соединение и попробуйте ещё раз'
 
 const initialForm = {
   name: '',
@@ -32,11 +36,16 @@ const initialForm = {
   firewoodBuckets: '0',
   comment: '',
   consent: false,
+  website: '',
 }
 
 export default function BookingPage() {
   const [form, setForm] = useState(initialForm)
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
+  const formStartedAt = useRef(Date.now())
+  const submissionInFlight = useRef(false)
   const pricing = siteData.booking.pricing
 
   const today = new Date()
@@ -51,6 +60,7 @@ export default function BookingPage() {
 
   const updateField = (event) => {
     const { name, type, value, checked } = event.target
+    if (submitError) setSubmitError('')
     setForm((current) => {
       const next = { ...current, [name]: type === 'checkbox' ? checked : value }
       if (name === 'checkIn' && current.checkOut && current.checkOut <= value) next.checkOut = ''
@@ -58,15 +68,49 @@ export default function BookingPage() {
     })
   }
 
-  const submitForm = (event) => {
+  const submitForm = async (event) => {
     event.preventDefault()
-    setSubmitted(true)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    if (submissionInFlight.current || submitted) return
+
+    submissionInFlight.current = true
+    setSubmitting(true)
+    setSubmitError('')
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), SUBMIT_TIMEOUT_MS)
+
+    try {
+      const response = await fetch('/api/booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(createBookingPayload(form, calculation, formStartedAt.current)),
+        signal: controller.signal,
+      })
+      let data = null
+      try {
+        data = await response.json()
+      } catch {
+        data = null
+      }
+      if (!response.ok || data?.ok !== true) throw new Error('booking-request-failed')
+
+      setSubmitted(true)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch {
+      submissionInFlight.current = false
+      setSubmitError(SUBMIT_ERROR_MESSAGE)
+    } finally {
+      window.clearTimeout(timeout)
+      setSubmitting(false)
+    }
   }
 
   const resetForm = () => {
-    setForm(initialForm)
+    setForm({ ...initialForm })
     setSubmitted(false)
+    setSubmitting(false)
+    setSubmitError('')
+    submissionInFlight.current = false
+    formStartedAt.current = Date.now()
   }
 
   return (
@@ -116,6 +160,10 @@ export default function BookingPage() {
           ) : (
             <>
               <form className="booking-form" onSubmit={submitForm}>
+                <label className="booking-honeypot" aria-hidden="true">
+                  <span>Не заполняйте это поле</span>
+                  <input name="website" type="text" value={form.website} onChange={updateField} tabIndex="-1" autoComplete="off" />
+                </label>
                 <div className="booking-form__section">
                   <div className="booking-form__section-head">
                     <span>01</span>
@@ -209,8 +257,14 @@ export default function BookingPage() {
                     <span className="check-field__box"><Check size={15} /></span>
                     <span>Я согласен(а) на обработку персональных данных <em>*</em></span>
                   </label>
-                  <button className="button button--primary button--large" type="submit">
-                    Отправить заявку <ArrowRight size={19} />
+                  {submitError && (
+                    <div className="form-notice form-notice--error" role="alert">
+                      <Info size={18} />
+                      <span>{submitError}</span>
+                    </div>
+                  )}
+                  <button className="button button--primary button--large" type="submit" disabled={submitting}>
+                    {submitting ? 'Отправляем заявку…' : 'Отправить заявку'} {!submitting && <ArrowRight size={19} />}
                   </button>
                   <div className="form-notice">
                     <Info size={18} />
