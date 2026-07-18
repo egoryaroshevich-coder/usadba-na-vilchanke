@@ -104,15 +104,6 @@ export default function BookingPage() {
     }
   }
 
-  const resetForm = () => {
-    setForm({ ...initialForm })
-    setSubmitted(false)
-    setSubmitting(false)
-    setSubmitError('')
-    submissionInFlight.current = false
-    formStartedAt.current = Date.now()
-  }
-
   return (
     <div className="booking-page">
       <header className="booking-header">
@@ -152,8 +143,12 @@ export default function BookingPage() {
                   <span>Отправка заявки не подтверждает бронирование. Дата будет закреплена после звонка администратора и согласования условий.</span>
                 </div>
                 <div className="success-card__actions">
-                  <a className="button button--dark" href="/">На главную <ArrowRight size={18} /></a>
-                  <button className="button button--outline" type="button" onClick={resetForm}>Отправить ещё одну</button>
+                  <button className="button button--dark" type="button" onClick={() => window.location.assign('/')}>
+                    На главную <ArrowRight size={18} />
+                  </button>
+                  <button className="button button--outline" type="button" onClick={() => window.location.assign('/booking')}>
+                    Отправить ещё одну
+                  </button>
                 </div>
               </div>
             </section>
